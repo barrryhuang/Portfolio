@@ -1,0 +1,81 @@
+IEnumerator Attack()
+    {
+        finalAttackState = Random.Range(100, 107);
+        //finalAttackState = 106;
+
+        PullAttackTimingData();
+        PlaySwingAudio();
+
+        enemyAnimator.SetInteger("State", finalAttackState);
+        currentMovementState = MovementState.NotMoving;
+        lookAtPlayer.enabled = false;
+        rvoController.enabled = false;
+        CoroutineManager.StartCoroutine(weapon.SetHazardous(attackDelay, attackHazardTime), gameObject);
+        yield return new Wait(attackDelay + attackHazardTime);
+        yield return new Wait(attackRecovery);
+        rvoController.enabled = true;
+        PosUpdateAfterRootMotion();
+        enemyAnimator.SetInteger("State", 1);
+
+        currentMovementState = MovementState.CombatZone;
+        lookAtPlayer.enabled = true;
+    }
+    void MovementAnimation()
+    {
+        enemyVelX = Mathf.SmoothDamp(enemyVelX, Mathf.Clamp(Mathf.Abs(rvoController.velocity.x), -0.3f, 0.3f), ref smoothingAnimVelX, Time.deltaTime / animationBlendTime);
+        enemyVelY = Mathf.SmoothDamp(enemyVelY, Mathf.Clamp(Mathf.Abs(rvoController.velocity.z), -0.3f, 0.6f), ref smoothingAnimVelY, Time.deltaTime / animationBlendTime);
+
+        if (!rvoController.enabled)
+        {
+            enemyVelX = 0f;
+            enemyVelY = 0f;
+        }
+
+        enemyAnimator.SetFloat("VelocityX", enemyVelX);
+        enemyAnimator.SetFloat("VelocityY", enemyVelY);
+    }
+public override void PlayBlockAnimation()
+    {
+        blockAnimationPlaying = true;
+        base.PlayBlockAnimation();
+        AudioManager.instance.PlayOneShot(audioResources.blockEvent, gameObject);
+        finalBlockState = Random.Range(200, 203);
+        enemyAnimator.SetInteger("State", finalBlockState);
+        enemyAnimator.SetTrigger("Parry");
+        Debug.Log("Parry trigger set");
+    }
+
+    public void PlayEnemyBlockAnimation()
+    {
+        base.PlayBlockAnimation();
+        AudioManager.instance.PlayOneShot(audioResources.blockEvent, gameObject);
+        finalBlockState = Random.Range(200, 203);
+        enemyAnimator.SetInteger("State", finalBlockState);
+        enemyAnimator.SetTrigger("Parry");
+        Debug.Log("Parry trigger set");
+    }
+    
+    void PosUpdateAfterRootMotion()
+    {
+        //CurrentStateLength = enemyAnimator.GetCurrentAnimatorStateInfo(0).length;
+        //Debug.Log("Current State Length is" + CurrentStateLength);
+        //yield return new Wait(1);
+
+        Vector3 enemyRootPos;
+        //Snapping the Nav Agent position to the mesh position
+        enemyRootPos.x = enemyAnimator.transform.position.x;
+        enemyRootPos.y = transform.position.y;
+        enemyRootPos.z = enemyAnimator.transform.position.z;
+        transform.position = enemyRootPos;
+
+        Vector3 enemyMeshTransformPos;
+        //Snapping the Mesh position back to the updated Nav Agent position
+        enemyMeshTransformPos.x = transform.position.x;
+        enemyMeshTransformPos.y = lastPoint.y;
+        enemyMeshTransformPos.z = transform.position.z;
+
+        enemyAnimator.transform.position = enemyMeshTransformPos;
+        ResetYCheck();
+    }
+
+    
