@@ -1,31 +1,39 @@
+//These are parts the code that i contributed to the indie game project Kurr Snaga
+//It containts the Attack and Block behaviour function, along with animation blending function and root motion implementation function.
+//code is rewritten and reorganized from the original source code for protfolio use.
+
+
+
+
+Pathfinding.RVO.RVOController agentController;
+
+
 IEnumerator Attack()
     {
-        finalAttackState = Random.Range(100, 107);
-        //finalAttackState = 106;
-
-        PullAttackTimingData();
-        PlaySwingAudio();
+        finalAttackState = Random.Range(0, 7); //int 1 to 7 repersents 7 different attack animation
+        SetWeaponLethal(); // activate weapon collider
+        PlaySwingSFX();
 
         enemyAnimator.SetInteger("State", finalAttackState);
         currentMovementState = MovementState.NotMoving;
         lookAtPlayer.enabled = false;
-        rvoController.enabled = false;
+        agentController.enabled = false;
         CoroutineManager.StartCoroutine(weapon.SetHazardous(attackDelay, attackHazardTime), gameObject);
         yield return new Wait(attackDelay + attackHazardTime);
         yield return new Wait(attackRecovery);
-        rvoController.enabled = true;
-        PosUpdateAfterRootMotion();
+        agentController.enabled = true;
         enemyAnimator.SetInteger("State", 1);
 
         currentMovementState = MovementState.CombatZone;
         lookAtPlayer.enabled = true;
     }
-    void MovementAnimation()
+    
+void MovementAnimation()
     {
-        enemyVelX = Mathf.SmoothDamp(enemyVelX, Mathf.Clamp(Mathf.Abs(rvoController.velocity.x), -0.3f, 0.3f), ref smoothingAnimVelX, Time.deltaTime / animationBlendTime);
-        enemyVelY = Mathf.SmoothDamp(enemyVelY, Mathf.Clamp(Mathf.Abs(rvoController.velocity.z), -0.3f, 0.6f), ref smoothingAnimVelY, Time.deltaTime / animationBlendTime);
+        enemyVelX = Mathf.SmoothDamp(enemyVelX, Mathf.Clamp(Mathf.Abs(agentController.velocity.x), -0.3f, 0.3f), ref smoothingAnimVelX, Time.deltaTime / animationBlendTime);
+        enemyVelY = Mathf.SmoothDamp(enemyVelY, Mathf.Clamp(Mathf.Abs(agentController.velocity.z), -0.3f, 0.6f), ref smoothingAnimVelY, Time.deltaTime / animationBlendTime);
 
-        if (!rvoController.enabled)
+        if (!agentController.enabled)
         {
             enemyVelX = 0f;
             enemyVelY = 0f;
@@ -34,7 +42,8 @@ IEnumerator Attack()
         enemyAnimator.SetFloat("VelocityX", enemyVelX);
         enemyAnimator.SetFloat("VelocityY", enemyVelY);
     }
-public override void PlayBlockAnimation()
+    
+public override void Block()
     {
         blockAnimationPlaying = true;
         base.PlayBlockAnimation();
@@ -44,23 +53,9 @@ public override void PlayBlockAnimation()
         enemyAnimator.SetTrigger("Parry");
         Debug.Log("Parry trigger set");
     }
-
-    public void PlayEnemyBlockAnimation()
-    {
-        base.PlayBlockAnimation();
-        AudioManager.instance.PlayOneShot(audioResources.blockEvent, gameObject);
-        finalBlockState = Random.Range(200, 203);
-        enemyAnimator.SetInteger("State", finalBlockState);
-        enemyAnimator.SetTrigger("Parry");
-        Debug.Log("Parry trigger set");
-    }
     
-    void PosUpdateAfterRootMotion()
+void PosUpdateAfterRootMotion() // This is a function that syncs 
     {
-        //CurrentStateLength = enemyAnimator.GetCurrentAnimatorStateInfo(0).length;
-        //Debug.Log("Current State Length is" + CurrentStateLength);
-        //yield return new Wait(1);
-
         Vector3 enemyRootPos;
         //Snapping the Nav Agent position to the mesh position
         enemyRootPos.x = enemyAnimator.transform.position.x;
