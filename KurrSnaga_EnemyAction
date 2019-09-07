@@ -1,76 +1,77 @@
-//These are parts the code that i contributed to the indie game project Kurr Snaga
+//These are parts the code I contributed to the indie game project Kurr Snaga
 //It containts the Attack and Block behaviour function, along with animation blending function and root motion implementation function.
-//code is rewritten and reorganized from the original source code for protfolio use.
-
-
+//The Code is isolated and rewritten from the original source code for protfolio use.
 
 
 Pathfinding.RVO.RVOController agentController;
 
-
-IEnumerator Attack()
+IEnumerator Attack() // This is the attack behaviour function.
     {
-        finalAttackState = Random.Range(0, 7); //int 1 to 7 repersents 7 different attack animation
-        SetWeaponLethal(); // activate weapon collider
+        AttackAnimation = Random.Range(0, 7); //Ramdomly rolling an integer from 0 to 6, which repersents 7 different attack animation
         PlaySwingSFX();
+        enemyAnimator.SetInteger("State", AttackAnimation); //Set Animator Controller state to play the previously rolled root motion attack animation
+        lookAtPlayer.enabled = false; //Make enemy stop looking at player
+        agentController.enabled = false; //Disable navagent
+        StartCoroutine(weapon.SetLethal(attackDelay, attackLethalTime), gameObject); //Enable weapon collider
+        yield return new WaitForSeconds(attackDelay + attackHazardTime + attackRecovery); //Let the IEnumerator wait until the attack animation is finished
+        agentPosUpdateAfterRootMotion(); //Update the navagent's position after the root motion animation is finished.
+        agentController.enabled = true; //Re-enable navagent
+        enemyAnimator.SetInteger("State", 1); //Set the Animator Controller back to movement state.
+        lookAtPlayer.enabled = true; //Make enemy looking at player again
+    }
 
-        enemyAnimator.SetInteger("State", finalAttackState);
-        currentMovementState = MovementState.NotMoving;
-        lookAtPlayer.enabled = false;
-        agentController.enabled = false;
-        CoroutineManager.StartCoroutine(weapon.SetHazardous(attackDelay, attackHazardTime), gameObject);
-        yield return new Wait(attackDelay + attackHazardTime);
-        yield return new Wait(attackRecovery);
-        agentController.enabled = true;
-        enemyAnimator.SetInteger("State", 1);
-
-        currentMovementState = MovementState.CombatZone;
-        lookAtPlayer.enabled = true;
+IEnumerator Block() //This is the block behaviour function
+    {
+        Invincibile = true; //Enemy Does not take damage during blocking
+        PlayBlockSFX();
+        lookAtPlayer.enabled = false; //Make enemy stop looking at player
+        agentController.enabled = false; //Disable navagent
+        finalBlockState = Random.Range(0, 3); //Ramdomly rolling an integer from 0 to 2, which repersents 3 different block animation
+        enemyAnimator.SetInteger("State", BlockAnimation); //Set Animator Controller state to play the previously rolled root motion block animation
+        yield return new Wait(BlockTime); //Let the IEnumerator wait until the block animation is finished
+        agentPosUpdateAfterRootMotion(); //Update the navagent's position after the root motion animation is finished.
+        lookAtPlayer.enabled = true;// Make enemy looking at player again
+        agentController.enabled = true;// Re-enable navagent
+        enemyAnimator.SetInteger("State", 1); // Set the Animator Controller back to movement state.
+        Invincibile = false;//Make the enemy take damage again
     }
     
-void MovementAnimation()
+void MovementAnimation() //This is the walk animation blend function
     {
-        enemyVelX = Mathf.SmoothDamp(enemyVelX, Mathf.Clamp(Mathf.Abs(agentController.velocity.x), -0.3f, 0.3f), ref smoothingAnimVelX, Time.deltaTime / animationBlendTime);
-        enemyVelY = Mathf.SmoothDamp(enemyVelY, Mathf.Clamp(Mathf.Abs(agentController.velocity.z), -0.3f, 0.6f), ref smoothingAnimVelY, Time.deltaTime / animationBlendTime);
-
-        if (!agentController.enabled)
+        //Get the navagent horizontal movement veolcity and clamp it to a useable range.
+        enemyVelX = Mathf.Clamp(agentController.velocity.x, -0.3f, 0.3f);
+        enemyVelY = Mathf.Clamp(agentController.velocity.z, -0.3f, 0.6f);
+        
+        if (!agentController.enabled) //Make sure the movement animation blending stays in idle pose if the navagent is disabled
         {
             enemyVelX = 0f;
             enemyVelY = 0f;
         }
-
+        
+        //Set the clamped navagent velocity data to the Animator Controller blending state
         enemyAnimator.SetFloat("VelocityX", enemyVelX);
         enemyAnimator.SetFloat("VelocityY", enemyVelY);
     }
     
-public override void Block()
+void agentPosUpdateAfterRootMotion() // This is a function that implements root motion. It allows the enemy to use treadmill animation for movement and root motion for attack/block
     {
-        blockAnimationPlaying = true;
-        base.PlayBlockAnimation();
-        AudioManager.instance.PlayOneShot(audioResources.blockEvent, gameObject);
-        finalBlockState = Random.Range(200, 203);
-        enemyAnimator.SetInteger("State", finalBlockState);
-        enemyAnimator.SetTrigger("Parry");
-        Debug.Log("Parry trigger set");
-    }
-    
-void PosUpdateAfterRootMotion() // This is a function that syncs 
-    {
-        Vector3 enemyRootPos;
-        //Snapping the Nav Agent position to the mesh position
-        enemyRootPos.x = enemyAnimator.transform.position.x;
-        enemyRootPos.y = transform.position.y;
-        enemyRootPos.z = enemyAnimator.transform.position.z;
+        //In the enemy gameobject hierarchy setup, enemy mesh is a child of the enemy navagent.
+
+        //Snapping the position of the enemy navagent to the enemy mesh position which misaligned with the navagent position after root motion.
+        enemyAgentPos.x = enemyMesh.transform.position.x;
+        enemyAgentPos.y = transform.position.y; // only snapping 
+        enemyAgentPos.z = enemyMesh.transform.position.z;
         transform.position = enemyRootPos;
 
         Vector3 enemyMeshTransformPos;
-        //Snapping the Mesh position back to the updated Nav Agent position
-        enemyMeshTransformPos.x = transform.position.x;
-        enemyMeshTransformPos.y = lastPoint.y;
-        enemyMeshTransformPos.z = transform.position.z;
+        //After the setp above, the navagent is in the correct position.
+        //But the enemy mesh position still misaligned with the navagent the enemy navagent due to the mesh is a child
+        //Therefore I need to Snap the position of the enemy mesh back to the updated enemy navagent position to make them aligned.
+        enemyMeshTransformPos.x = enemyAgentPos.x;
+        enemyMeshTransformPos.y = enemyAgentPos.y;
+        enemyMeshTransformPos.z = enemyAgentPos.z;
 
-        enemyAnimator.transform.position = enemyMeshTransformPos;
-        ResetYCheck();
+        enemyMesh.transform.position = enemyMeshTransformPos;
     }
 
     
