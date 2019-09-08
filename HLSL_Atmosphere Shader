@@ -14,7 +14,8 @@ Shader "Atmosphere" {
             "Queue"="Transparent"
             "RenderType"="Transparent"
         }
-        Pass {
+    Pass 
+    {
             Blend One One
             Cull Off
             ZWrite Off
@@ -27,34 +28,42 @@ Shader "Atmosphere" {
             uniform float _inner_atm;
             uniform float _outer_atm;
             uniform sampler2D _Noise1; 
-			uniform float4 _Noise1_ST;
+	    uniform float4 _Noise1_ST;
             uniform sampler2D _Noise2; 
-			uniform float4 _Noise2_ST;
+	    uniform float4 _Noise2_ST;
             uniform float _CameraPosForward;
             uniform float _radius;
             uniform sampler2D _Noise3;
-			uniform float4 _Noise3_ST;
-            struct vInput {
+	    uniform float4 _Noise3_ST;
+            
+	    struct vInput 
+	    {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
                 float2 texcoord0 : TEXCOORD0;
             };
-            struct v2f {
+            struct v2f 
+	    {
                 float4 pos : SV_POSITION;
                 float2 uv0 : TEXCOORD0;
                 float4 posWorld : tSpace1;
                 float3 normalDir : tSpace2;
             };
-			v2f vert (vInput v) {
-				v2f o = (v2f)0;
+	    
+	    //Vertex Shader
+	    v2f vert (vInput v) 
+	    {
+		v2f o = (v2f)0;
                 o.uv0 = v.texcoord0;
                 o.normalDir = UnityObjectToWorldNormal(v.normal);
                 o.posWorld = mul(unity_ObjectToWorld, v.vertex);
                 o.pos = UnityObjectToClipPos( v.vertex );
                 return o;
             }
+	    
+	    //Fragment Shader
             float4 frag(v2f i, float facing : VFACE) : SV_target 
-			{
+	    {
                 float isFrontFace = ( facing >= 0 ? 1 : 0 );
                 float faceSign = ( facing >= 0 ? 1 : -1 );
                 i.normalDir = normalize(i.normalDir);
@@ -63,36 +72,36 @@ Shader "Atmosphere" {
                 float3 normalDirection = i.normalDir;
                 float4 Time = _Time;
 				
-				// Panning the noise texture to create atmosphere gas feeling
+		// Panning the noise texture to create atmosphere gas feeling
                 float2 panner1 = (i.uv0+ Time.g*float2(0.02,0.02)); 
                 float4 _Noise1_var = tex2D(_Noise1,TRANSFORM_TEX(panner1, _Noise1));
 
-				// Second panning noise texture
+		// Second panning noise texture
                 float2 panner2 = (i.uv0+ Time.g*float2(0.02,-0.03)); 
                 float4 _Noise2_var = tex2D(_Noise2,TRANSFORM_TEX(panner2, _Noise2));
 
-				// Third noise texture, without panning
+		// Third noise texture, without panning
                 float4 _Noise3_var = tex2D(_Noise3,TRANSFORM_TEX(i.uv0, _Noise3));
 				
-				// Using fresnel to create one outter rim and one inner rim
-				float4 fresnel = dot(normalDirection, viewDirection);
-				float3 outterRim = pow((1 - pow(1 - max(0, fresnel), _outer_atm)), 6);
-				float3 innerRim = (1 - pow(1 - max(0, fresnel), _inner_atm))*0.5;
+		// Using fresnel to create one outter rim and one inner rim
+		float4 fresnel = dot(normalDirection, viewDirection);
+		float3 outterRim = pow((1 - pow(1 - max(0, fresnel), _outer_atm)), 6);
+		float3 innerRim = (1 - pow(1 - max(0, fresnel), _inner_atm))*0.5;
 				
-				// Subtrack the outterRim and the innerRim to get a final donuts looking rim with soft inner and outter edge
-				float3 finalRimLight = outterRim - innerRim;
+		// Subtrack the outterRim and the innerRim to get a final donuts looking rim with soft inner and outter edge
+		float3 finalRimLight = outterRim - innerRim;
 
-				// This is the final noise
-				float3 atmosphereNoise = pow((_Noise1_var.rgb * _Noise2_var.r * _Noise3_var.rgb), 1);
+		// This is the final noise
+		float3 atmosphereNoise = pow((_Noise1_var.rgb * _Noise2_var.r * _Noise3_var.rgb), 1);
 				
-				// Making the atmosphere fadeout when it is too close to the camera
-				float3 CameraDistanceFade = 0.5 * (clamp((distance(i.posWorld.rgb, _WorldSpaceCameraPos) + _CameraPosForward), -1, 3) / _radius);
+		// Making the atmosphere fadeout when it is too close to the camera
+		float3 CameraDistanceFade = 0.5 * (clamp((distance(i.posWorld.rgb, _WorldSpaceCameraPos) + _CameraPosForward), -1, 3) / _radius);
 
-				// This is the final result
-				float3 finalAtmosphere = saturate(finalRimLight * 1.4 * atmosphereNoise * CameraDistanceFade);
+		// This is the final result
+		float3 finalAtmosphere = saturate(finalRimLight * 1.4 * atmosphereNoise * CameraDistanceFade);
                 
-				// Multiplying the color tint
-				float3 emissive = (finalAtmosphere * _TintColor.rgb * 2); 
+		// Multiplying the color tint
+		float3 emissive = (finalAtmosphere * _TintColor.rgb * 2); 
                 fixed4 finalRGBA = fixed4(emissive, 1);
                 return finalRGBA;
             }
