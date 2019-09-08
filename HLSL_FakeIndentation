@@ -1,12 +1,12 @@
-Shader "Parallax" {
+Shader "FakeIndentation" 
+{
     Properties {
         _highthMap ("highthMap", 2D) = "white" {}
 		_Texture("Texture", 2D) = "white" {}
-        _ParallaxDepth ("ParallaxDepth", Range(-1, 1)) = -0.5
+        _ParallaxDepth ("ParallaxDepth", Range(-1, 1)) = -0.5669227
     }
     SubShader {
         Pass {
-            Name "FORWARD"
             Tags {
                 "LightMode"="ForwardBase"
             }
@@ -19,9 +19,9 @@ Shader "Parallax" {
             #include "UnityCG.cginc"
             uniform float4 _LightColor0;
             uniform sampler2D _highthMap;
-	    uniform float4 _highthMap_ST;
+			uniform float4 _highthMap_ST;
             uniform sampler2D _Texture;
-	    uniform float4 _Texture_ST;
+			uniform float4 _Texture_ST;
             uniform float _ParallaxDepth;
             struct vInput 
 			{
