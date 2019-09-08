@@ -17,12 +17,11 @@ Shader "Parallax" {
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
-            #pragma target 3.0
             uniform float4 _LightColor0;
             uniform sampler2D _highthMap;
-			uniform float4 _highthMap_ST;
+	    uniform float4 _highthMap_ST;
             uniform sampler2D _Texture;
-			uniform float4 _Texture_ST;
+	    uniform float4 _Texture_ST;
             uniform float _ParallaxDepth;
             struct vInput 
 			{
