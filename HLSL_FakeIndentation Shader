@@ -63,14 +63,6 @@ Shader "FakeIndentation" {
                 float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
                 float3 lightColor = _LightColor0.rgb;
 
-		//Setup Diffuse
-		float attenuation = 1;
-		float3 attenColor = attenuation * _LightColor0.xyz;
-		float NdotL = max(0.0, dot(normalDirection, lightDirection));
-		float3 directDiffuse = max(0.0, NdotL) * attenColor;
-                float3 diffuseColor = _Texture_var.rgb;
-                float3 diffuse = (directDiffuse) * diffuseColor;
-
 		// Define highthMap variable
 		float4 _highthMap_var = tex2D(_highthMap, TRANSFORM_TEX(i.uv0, _highthMap));
 
@@ -79,6 +71,14 @@ Shader "FakeIndentation" {
 
 		// Final Texture variable
 		float4 _Texture_var = tex2D(_Texture, TRANSFORM_TEX(_Parallax.rg, _Texture));
+		
+		//Setup Diffuse
+		float attenuation = 1;
+		float3 attenColor = attenuation * _LightColor0.xyz;
+		float NdotL = max(0.0, dot(normalDirection, lightDirection));
+		float3 directDiffuse = max(0.0, NdotL) * attenColor;
+                float3 diffuseColor = _Texture_var.rgb;
+                float3 diffuse = (directDiffuse) * diffuseColor;
 
                 fixed4 finalRGBA = fixed4(diffuse, 1);
                 return finalRGBA;
