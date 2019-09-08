@@ -1,0 +1,58 @@
+public Vector3 GetDirOfHit(Vector3 hitPoint)
+    {
+        Vector3 dir = transform.position - hitPoint;
+        dir = new Vector3(dir.x, Mathf.Abs(dir.y), dir.z);
+
+        Debug.DrawRay(transform.position, dir.normalized * 20, Color.yellow, 5);
+
+        return dir.normalized;
+    }
+
+    public virtual void HitProp(Vector3 hitPropDir, bool footWeaponCheck, float magnitude = 20)
+    {
+        if (doOnce && magnitude > 10)
+        {
+            if (propImpactEvent != null)
+            {
+                AudioManager.instance.PlayOneShot(propImpactEvent, gameObject);
+            }
+
+            Collider[] cols = gameObject.GetComponentsInChildren<Collider>();
+
+            foreach (Collider col in cols)
+            {
+                col.gameObject.AddComponent<Rigidbody>();
+                PropInteraction prop = col.GetComponent<PropInteraction>();
+
+                if (prop == null)
+                {
+                    SubPropInteraction SubProp = col.gameObject.AddComponent<SubPropInteraction>();
+                }
+
+                Rigidbody propRbody = col.gameObject.GetComponent<Rigidbody>();
+                propRbody.drag = 0.01f;
+                propRbody.isKinematic = false;
+                col.gameObject.transform.parent = null;
+                if(footWeaponCheck)
+                {
+                    propRbody.AddForce(hitPropDir * Constants.VenderKnockForce);
+                }
+
+                //Todo:/Barry/ Should be able to keep kicking the props after interaction
+                Debug.Log("Impacted, hidPropDir is " + hitPropDir);
+            }
+
+            OnEnterDisableSelf[] onEnterDisableSelfs = gameObject.GetComponentsInChildren<OnEnterDisableSelf>();
+            foreach (OnEnterDisableSelf onEnterDisableSelf in onEnterDisableSelfs)
+            {
+                onEnterDisableSelf.gameObject.SetActive(false);
+            }
+
+            foreach (GameObject item in velHazards)
+            {
+                item.AddComponent<VelHazard>();
+            }
+
+            doOnce = false;
+        }
+    }
