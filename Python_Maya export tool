@@ -1,0 +1,28 @@
+# This python script is a custom tool that I made for automating a export procedure.
+# Executing the script creates a window with a text field to input the export directory and a button for click to export.
+# Once the button is clicked, the script will automatically freeze the selected object's transform, delete it's history, center it's pivot and export it to the directory as OBJ. 
+
+
+import maya.cmds as mc
+import pymel.core as pm
+
+def ui():
+    if mc.window('Export3in1', exists = True):
+        mc.deleteUI('Export4in1')
+    
+    myWin = mc.window('Export4in1')
+    mc.showWindow('Export4in1')
+    mc.columnLayout()
+    mc.text(label = 'Enter export target directory')
+    mc.textField('directoryInput')
+    mc.text(label = 'Click to export obj')
+    mc.button(label = 'export', command = 'export4in1()')
+
+def export4in1():
+    mc.makeIdentity(apply=True, t=1, r=1, s=1, n=0)
+    mc.delete(ch=True)
+    mc.xform(cp=True)
+    directory = mc.textField('directoryInput', q = True, text = True)
+    pm.system.exportSelected(directory, type='OBJexport')
+
+ui()
