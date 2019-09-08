@@ -1,0 +1,24 @@
+
+
+
+void DoWeaponSway()
+    {
+        float movementX = -Input.GetAxis("Mouse X") * amount;
+        float movementY = -Input.GetAxis("Mouse Y") * amount;
+        movementX = Mathf.Clamp(movementX, -maxAmount, maxAmount);
+        movementY = Mathf.Clamp(movementY, -maxAmount, maxAmount);
+
+        Vector3 finalPosition = new Vector3(movementX, movementY, 0);
+        transform.localPosition = Vector3.Lerp(transform.localPosition, finalPosition + initialPosition, Time.deltaTime * smoothAmount);
+    }
+
+    internal void TiltOnMovement()
+    {
+        Quaternion parentRot = transform.parent.rotation;
+        float horizontalTilt = Input.GetAxis("Horizontal") * tiltAmount;
+
+        float tiltMovement = Mathf.SmoothDampAngle(lastHorizontalTilt, horizontalTilt, ref tiltVel, Time.deltaTime * tiltSmooth);
+
+        lastHorizontalTilt = tiltMovement;
+        transform.rotation = parentRot * Quaternion.AngleAxis(-lastHorizontalTilt, Vector3.forward);
+    }
