@@ -1,24 +1,32 @@
+//This is a script that I contributed to one of the indie game Unity3D project that I participated.
+//The Code is isolated and rewritten from the original source code for protfolio use.
 
 
-
-void DoWeaponSway()
+void WeaponSway()// This function controls the weapon sway when the player is rotating the first person camera
     {
-        float movementX = -Input.GetAxis("Mouse X") * amount;
-        float movementY = -Input.GetAxis("Mouse Y") * amount;
-        movementX = Mathf.Clamp(movementX, -maxAmount, maxAmount);
-        movementY = Mathf.Clamp(movementY, -maxAmount, maxAmount);
-
-        Vector3 finalPosition = new Vector3(movementX, movementY, 0);
+        // Get mouse input and clamp them into a desire scale
+        float swayX = -Input.GetAxis("Mouse X") * amount;
+        float swayY = -Input.GetAxis("Mouse Y") * amount;
+        swayX = Mathf.Clamp(swayX, -maxAmount, maxAmount);
+        swayY = Mathf.Clamp(swayY, -maxAmount, maxAmount);
+        
+        // Smooth Lerp the weapon mesh from original position to target position
+        Vector3 finalPosition = new Vector3(swayX, swayY, 0);
         transform.localPosition = Vector3.Lerp(transform.localPosition, finalPosition + initialPosition, Time.deltaTime * smoothAmount);
     }
 
-    internal void TiltOnMovement()
+void CameraTilt()// This function controls the left and right camera tilt when the player is moving left and right with directional input
     {
+        // Get the current rotation of the camera tilt parent on the playercontroller hierarchy, the first person camera is a child of this parent.
         Quaternion parentRot = transform.parent.rotation;
+        
+        // Get the left and right direction input and multiply it with tilt amount multiplyer
         float horizontalTilt = Input.GetAxis("Horizontal") * tiltAmount;
-
-        float tiltMovement = Mathf.SmoothDampAngle(lastHorizontalTilt, horizontalTilt, ref tiltVel, Time.deltaTime * tiltSmooth);
-
-        lastHorizontalTilt = tiltMovement;
+        
+        // Smooth Lerp the tilt angle to pervent hard poping when switching input direction
+        float tilt = Mathf.SmoothDampAngle(lastHorizontalTilt, horizontalTilt, ref tiltVel, Time.deltaTime * tiltSmooth);
+        
+        // Apply the final tilt rotation back to the camera tilt parent.
+        lastHorizontalTilt = tilt;
         transform.rotation = parentRot * Quaternion.AngleAxis(-lastHorizontalTilt, Vector3.forward);
     }
