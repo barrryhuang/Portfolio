@@ -1,6 +1,11 @@
-public Vector3 GetDirOfHit(Vector3 hitPoint)
+// This is a script that I contributed to one of the indie game Unity3D project that I participated.
+// This script controls how props behave when interacting with player action
+// The Code is isolated and rewritten from the original source code for protfolio use.
+
+
+public Vector3 GetDirOfHit(Vector3 ContactPoint)// This function gets the incoming direction of received impact and returns a normalized value
     {
-        Vector3 dir = transform.position - hitPoint;
+        Vector3 dir = transform.position - ContactPoint; // ContactPoint value will be passed in by other function
         dir = new Vector3(dir.x, Mathf.Abs(dir.y), dir.z);
 
         Debug.DrawRay(transform.position, dir.normalized * 20, Color.yellow, 5);
@@ -8,51 +13,45 @@ public Vector3 GetDirOfHit(Vector3 hitPoint)
         return dir.normalized;
     }
 
-    public virtual void HitProp(Vector3 hitPropDir, bool footWeaponCheck, float magnitude = 20)
+public void HitProp(Vector3 hitPropDir, bool footWeaponCheck)
     {
-        if (doOnce && magnitude > 10)
+        if (doOnce)// Do once check for preventing the script from firing multiple times unintentionally
         {
-            if (propImpactEvent != null)
-            {
-                AudioManager.instance.PlayOneShot(propImpactEvent, gameObject);
-            }
-
+            //Upon hitting the prop, Collects all the gameobjects under the prop parent and put them into an array
             Collider[] cols = gameObject.GetComponentsInChildren<Collider>();
 
             foreach (Collider col in cols)
             {
+                // Adding rigidbody 
                 col.gameObject.AddComponent<Rigidbody>();
-                PropInteraction prop = col.GetComponent<PropInteraction>();
-
-                if (prop == null)
+                PropInteraction propScript = col.GetComponent<PropInteraction>();
+                
+                // Script null check for each prop in the array
+                if (propScript == null)
                 {
+                    // If the prop doesn't have the prop script on, add one
                     SubPropInteraction SubProp = col.gameObject.AddComponent<SubPropInteraction>();
                 }
-
+                
+                // Getting the rigidbody that we just added and config it to the correct setting
                 Rigidbody propRbody = col.gameObject.GetComponent<Rigidbody>();
                 propRbody.drag = 0.01f;
                 propRbody.isKinematic = false;
+                
+                //Unparent every single prop piece under the prop parent
                 col.gameObject.transform.parent = null;
+                
+                // If the player is kicking the prop by foot, disable kinematic on rigidbody and add force onto the prop to send it flying.
                 if(footWeaponCheck)
                 {
-                    propRbody.AddForce(hitPropDir * Constants.VenderKnockForce);
+                    propRbody.isKinematic = false;
+                    propRbody.AddForce(hitPropDir * Constants.KickingForce);
                 }
-
-                //Todo:/Barry/ Should be able to keep kicking the props after interaction
-                Debug.Log("Impacted, hidPropDir is " + hitPropDir);
+                Debug.Log("Impacted, hitPropDir is " + hitPropDir);
             }
-
-            OnEnterDisableSelf[] onEnterDisableSelfs = gameObject.GetComponentsInChildren<OnEnterDisableSelf>();
-            foreach (OnEnterDisableSelf onEnterDisableSelf in onEnterDisableSelfs)
-            {
-                onEnterDisableSelf.gameObject.SetActive(false);
-            }
-
-            foreach (GameObject item in velHazards)
-            {
-                item.AddComponent<VelHazard>();
-            }
-
+            
+            // Play sound effect once
+            AudioManager.instance.PlayOneShot(propImpactEvent, gameObject);
             doOnce = false;
         }
     }
