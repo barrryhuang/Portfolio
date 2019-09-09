@@ -1,0 +1,42 @@
+# This python script is a custom tool that I made for Executing commands for every 15 second. Currently is wrote to delete history once for every 15 second.
+# Executing the script creates a window with a button that can toggle between On/Off for the 15 second Timer.
+# Besides deleting history, other commands can be fit into the "commands()" function for over time execution.
+
+
+import maya.cmds as mc
+import datetime
+
+global script_job_on
+script_job_on = False
+
+def ui():
+    global script_job_on
+    if mc.window('ClearHistoryOverTime', exists = True):
+        mc.deleteUI('ClearHistoryOverTime')
+    
+    myWin = mc.window('ClearHistoryOverTime')
+    mc.showWindow('ClearHistoryOverTime')
+    mc.columnLayout()
+    mc.text(label = 'Click to toggle On/Off')
+    mc.button(label = 'Toggle', command = 'toggleSwitch()')
+
+ui()
+
+
+def toggleSwitch():
+    global script_job_on
+    script_job_on = not script_job_on
+    print(script_job_on)
+
+        
+def run_every_n():
+    global script_job_on
+    return datetime.datetime.now().second % 15 == 0 and script_job_on 
+    
+def commands():
+    mc.delete(ch=True)
+    print("HistoryCleaned")
+
+
+mc.condition("run_script_job", s='python("run_every_n()")', d="idle")
+script_job = mc.scriptJob(ct=["run_script_job", "commands()"])
