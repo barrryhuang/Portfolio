@@ -1,0 +1,114 @@
+Shader "Fake Interiors FREE MOD HLSL"
+{
+	Properties
+	{
+		_RoomColorTint("Room Color Tint", Color) = (1,1,1,0)
+		_RoomIntensity("Room Intensity", Range( 0 , 100)) = 1
+		[NoScaleOffset]_Floor("Floor Texture", 2D) = "white" {}
+		_FloorTexTiling("Floor Tex Tiling", Range( 0 , 10)) = 0
+		[NoScaleOffset]_SideWall("SideWall Texture", 2D) = "white" {}
+		_SideWalltexTiling("Side Wall tex Tiling", Range( 0 , 100)) = 0
+		[NoScaleOffset]_FrontWall("FrontWall Texture", 2D) = "white" {}
+		_FrontWallTexTiling("Front Wall Tex Tiling", Range( 0 , 100)) = 0
+		[NoScaleOffset]_Ceiling("Ceiling Texture", 2D) = "white" {}
+		_CeilingTexTiling("Ceiling Tex Tiling", Range( 0 , 100)) = 0
+		_RoomTile("Room Tile", Range( 0.1 , 10)) = 0
+		_PositionOffset("Position Offset", Vector) = (0,0,0,0)
+		_RoomsScale("Rooms Scale", Vector) = (0,0,0,0)
+	}
+	
+	SubShader
+	{
+		
+		Tags { "RenderType"="Opaque" }
+		
+		Pass
+		{
+			Tags { "LightMode"="ForwardBase" }
+
+			CGPROGRAM
+
+			#pragma vertex vert
+			#pragma fragment frag
+			#include "UnityCG.cginc"
+
+			struct appdata
+			{
+				float4 vertex : POSITION;
+				float4 color : COLOR;				
+			};
+			
+			struct v2f
+			{
+				float4 vertex : SV_POSITION;
+				float4 vertPos : TEXCOORD0;
+			};
+
+			uniform float4 _RoomColorTint;
+			uniform float3 _RoomsScale;
+			uniform float _RoomTile;
+			uniform float3 _PositionOffset;
+			uniform sampler2D _SideWall;
+			uniform float _SideWalltexTiling;
+			uniform sampler2D _FrontWall;
+			uniform float _FrontWallTexTiling;
+			uniform sampler2D _Floor;
+			uniform float _FloorTexTiling;
+			uniform sampler2D _Ceiling;
+			uniform float _CeilingTexTiling;
+			uniform float _RoomIntensity;
+			
+			v2f vert ( appdata v )
+			{
+				v2f o;
+				o.vertPos = v.vertex;
+				o.vertex = UnityObjectToClipPos(v.vertex);
+				return o;
+			}
+			
+			fixed4 frag (v2f i ) : SV_Target
+			{
+
+				//Get the room plane in all xyz three axies via camera position and vertex position
+				float3 roomData = ( _RoomsScale * _RoomTile );
+				float4 camPos = mul(unity_WorldToObject, (float4(_WorldSpaceCameraPos , 1.0)));
+				float4 camPosOffsetResult = ( camPos - float4( _PositionOffset , 0.0 ) );
+				float4 vertFromCamDis = ( float4( ( i.vertPos.xyz - _PositionOffset ) , 0.0 ) - camPosOffsetResult );
+				float3 vertFromCamDis2 = floor( ( roomData * ( i.vertPos.xyz - _PositionOffset ) ) ) + step( float4( 0,0,0,0 ) , vertFromCamDis );
+				float4 roomPlane = ( ( float4( ( vertFromCamDis2 / roomData ) , 0.0 ) - camPosOffsetResult ) / vertFromCamDis );
+				
+				//Compare the room planes from above to sort out the correct display order
+				float planeOnTop = 0;
+				if(roomPlane.z >= roomPlane.x)
+				planeOnTop = roomPlane.x;
+				else
+				planeOnTop = roomPlane.z;
+				float4 Side = tex2D( _SideWall, ( (( ( roomPlane.z * vertFromCamDis ) + camPosOffsetResult )).xy * _SideWalltexTiling ) );
+				float4 Front = tex2D( _FrontWall, ( (( ( roomPlane.x * vertFromCamDis ) + camPosOffsetResult )).zy * _FrontWallTexTiling ) );
+				float4 FrontOrSide = 0;
+				if(roomPlane.z >= roomPlane.x)
+				FrontOrSide = Front;
+				else
+				FrontOrSide = Side;
+
+				//Get the determination point for floor or ceiling texture via Y axis and the vertex to camera distance
+				//Display floor texture when the plane is below determination point. Display ceiling texture when above.
+				float2 CeilFloorLine = (( ( roomPlane.y * vertFromCamDis ) + camPosOffsetResult )).xz;
+				float4 Ceil = lerp( tex2D( _Floor, ( CeilFloorLine * _FloorTexTiling ) ) , tex2D( _Ceiling, ( CeilFloorLine * _CeilingTexTiling ) ) , step( 0.0 , (vertFromCamDis).y ));
+				float4 CeilOrWall = 0;
+				if( roomPlane.y <= planeOnTop ) 
+				CeilOrWall = Ceil;
+				else
+				CeilOrWall = FrontOrSide;
+
+				//Multiply with colorTint and intensity and return the final color.
+				fixed4 finalColor;
+				finalColor = ( _RoomColorTint * ( CeilOrWall * _RoomIntensity ) );
+				
+				return finalColor;
+			}
+			ENDCG
+		}
+	}
+	FallBack "Diffuse"
+}
